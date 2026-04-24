@@ -30,6 +30,8 @@ class TypelyTray:
         on_groq_model_change: Callable[[str], None],
         on_silence_enabled_change: Callable[[bool], None],
         on_silence_timeout_change: Callable[[int], None],
+        autostart_enabled: bool,
+        on_autostart_change: Callable[[bool], None],
         on_quit: Callable[[], None],
     ) -> None:
         self.app = app
@@ -51,6 +53,7 @@ class TypelyTray:
         self.on_groq_model_change = on_groq_model_change
         self.on_silence_enabled_change = on_silence_enabled_change
         self.on_silence_timeout_change = on_silence_timeout_change
+        self.on_autostart_change = on_autostart_change
         self.on_quit = on_quit
 
         self.tray = QSystemTrayIcon(self._build_icon(), app)
@@ -95,6 +98,12 @@ class TypelyTray:
         )
         self.silence_timeout_action.triggered.connect(self._prompt_silence_timeout)
         self.menu.addAction(self.silence_timeout_action)
+
+        self.autostart_action = QAction("Start Typely on Login", self.menu)
+        self.autostart_action.setCheckable(True)
+        self.autostart_action.setChecked(autostart_enabled)
+        self.autostart_action.toggled.connect(self.on_autostart_change)
+        self.menu.addAction(self.autostart_action)
 
         self.menu.addSeparator()
         quit_action = QAction("Quit", self.menu)
@@ -301,6 +310,11 @@ class TypelyTray:
 
     def set_silence_timeout_label(self, value_ms: int) -> None:
         self.silence_timeout_action.setText(f"Set Silence Timeout ({value_ms} ms)")
+
+    def set_autostart_enabled(self, enabled: bool) -> None:
+        self.autostart_action.blockSignals(True)
+        self.autostart_action.setChecked(enabled)
+        self.autostart_action.blockSignals(False)
 
     def notify(self, title: str, message: str) -> None:
         self.tray.showMessage(title, message, QSystemTrayIcon.Information, 2500)

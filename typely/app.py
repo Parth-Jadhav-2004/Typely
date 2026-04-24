@@ -22,6 +22,7 @@ from PySide6.QtWidgets import (
 )
 
 from typely.audio import AudioRecorder, list_input_devices
+from typely.autostart import build_exec_command, disable_autostart, enable_autostart, is_autostart_enabled
 from typely.config import AppConfig, load_config, save_config
 from typely.groq import GroqTranscriber, SUPPORTED_GROQ_MODELS
 from typely.hotkeys import GlobalHotkeyManager, hotkeys_collide, mode_allows, parse_hotkey
@@ -217,6 +218,8 @@ class TypelyController(QObject):
             on_groq_model_change=self.set_groq_model,
             on_silence_enabled_change=self.set_silence_autostop,
             on_silence_timeout_change=self.set_silence_timeout,
+            autostart_enabled=is_autostart_enabled(),
+            on_autostart_change=self.set_autostart_enabled,
             on_quit=self.shutdown,
         )
 
@@ -611,6 +614,22 @@ class TypelyController(QObject):
         self.vad.silence_ms = int(timeout_ms)
         self.tray.set_silence_timeout_label(int(timeout_ms))
         self._save_config()
+
+    def set_autostart_enabled(self, enabled: bool) -> None:
+        project_root = Path(__file__).resolve().parents[1]
+        try:
+            if enabled:
+                exec_command = build_exec_command(project_root=project_root)
+                enable_autostart(exec_command=exec_command, working_dir=project_root)
+                self.tray.notify("Typely", "Startup on login enabled")
+            else:
+                disable_autostart()
+                self.tray.notify("Typely", "Startup on login disabled")
+        except Exception as exc:  # noqa: BLE001
+            LOGGER.error("Failed to update startup setting: %s", exc)
+            self.tray.notify("Typely Error", f"Failed to update startup setting: {exc}")
+        finally:
+            self.tray.set_autostart_enabled(is_autostart_enabled())
 
     def open_model_download_dialog(self) -> None:
         dialog = QDialog()
