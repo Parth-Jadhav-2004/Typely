@@ -7,12 +7,12 @@ Typely is an Ubuntu Linux tray application for speech-to-text transcription.
 - Tray-first workflow (starts hidden in system tray)
 - Global hotkeys for toggle and hold-to-talk recording
 - Editable hotkeys from tray menu
-- Local Whisper transcription (`small`, `medium`) via `faster-whisper`
-- Optional Groq transcription provider
+- Fast, local Whisper transcription (`small`, `medium`) via `faster-whisper`
 - Model download controls from tray
 - Output mode: paste at cursor or clipboard-only
 - Silence auto-stop with configurable timeout
 - Microphone device selection
+- Easy installation via Debian package
 
 ## Requirements
 
@@ -21,20 +21,26 @@ Typely is an Ubuntu Linux tray application for speech-to-text transcription.
 - `xclip` and `xdotool` (for clipboard and auto-paste)
 - Microphone access
 
-## Setup
+## Installation
+
+The easiest way to install Typely is using the provided Debian package:
+
+```bash
+sudo dpkg -i typely_1.0.0_all.deb
+sudo apt-get install -f  # To install any missing dependencies
+```
+
+After installation, you can launch Typely directly from your applications menu. The application will start hidden in your system tray.
+
+### Development Setup
+
+If you want to run from source:
 
 ```bash
 ./scripts/setup_ubuntu.sh
-```
-
-## Run
-
-```bash
 source .venv/bin/activate
 python -m typely
 ```
-
-At launch, Typely stays hidden and runs in the tray. Use `Open Typely` in the tray menu to open the control window.
 
 ## Tray Controls
 
@@ -45,9 +51,8 @@ At launch, Typely stays hidden and runs in the tray. Use `Open Typely` in the tr
   - Set Toggle Hotkey...
   - Set Hold Hotkey...
   - Reset Hotkeys to Default
-- Transcription provider/model settings
-- Groq API key/model settings
-- Output mode
+- Model settings (`small`, `medium`)
+- Output mode (`cursor_paste`, `clipboard_only`)
 - Microphone selection and refresh
 - Silence auto-stop enable/timeout
 
@@ -67,9 +72,6 @@ Schema keys include:
 - `silence_autostop_ms`
 - `paste_mode` (`cursor_paste`, `clipboard_only`)
 - `audio_device`
-- `transcription_provider` (`local`, `groq`)
-- `groq_api_key`
-- `groq_model`
 
 ## Tests
 
