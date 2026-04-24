@@ -1,0 +1,17 @@
+Package: typely
+Version: 1.0.0
+Section: utils
+Priority: optional
+Architecture: all
+Depends: python3 (>= 3.11), python3-venv, python3-dev, portaudio19-dev, libportaudio2, ffmpeg, xclip, xdotool, libportaudio2
+Recommends: python3-pip
+Maintainer: Typely Developers <dev@typely.app>
+Description: Speech-to-text transcription tray application
+ Typely is an Ubuntu Linux tray application for speech-to-text
+ transcription using local Whisper models or Groq API.
+ Features:
+  - Tray-first workflow
+  - Global hotkeys for toggle and hold-to-talk recording
+  - Local Whisper transcription via faster-whisper
+  - Optional Groq transcription provider
+  - Silence auto-stop with configurable timeout

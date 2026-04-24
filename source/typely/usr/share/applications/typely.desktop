@@ -1,0 +1,10 @@
+[Desktop Entry]
+Name=Typely
+Comment=Speech-to-text transcription tray application
+Exec=/usr/bin/typely
+Icon=typely
+Type=Application
+Categories=Utility;Accessibility;
+Terminal=false
+StartupNotify=false
+X-GNOME-Autostart-enabled=true

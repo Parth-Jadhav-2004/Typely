@@ -1,0 +1,28 @@
+#!/bin/bash
+set -e
+
+VENV_DIR="/usr/share/typely/.venv"
+APP_DIR="/usr/share/typely"
+
+# Create virtual environment and install dependencies
+echo "Setting up Typely Python environment..."
+python3 -m venv "$VENV_DIR"
+source "$VENV_DIR/bin/activate"
+pip install --upgrade pip setuptools wheel
+pip install -r "$APP_DIR/requirements.txt"
+
+# Make venv accessible to all users (readable and executable)
+chmod -R a+rX "$VENV_DIR"
+chmod -R a+x "$VENV_DIR/bin"
+
+# Create config directory for the installing user
+if [ -n "$SUDO_USER" ] && [ "$SUDO_USER" != "root" ]; then
+    typely_home=$(getent passwd "$SUDO_USER" | cut -d: -f6)
+    mkdir -p "$typely_home/.config/typely"
+    chown "$SUDO_USER:$SUDO_USER" "$typely_home/.config/typely"
+fi
+
+echo "Typely has been installed successfully!"
+echo "Run 'typely' to start the application."
+
+exit 0

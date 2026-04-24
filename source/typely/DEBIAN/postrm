@@ -1,0 +1,9 @@
+#!/bin/bash
+set -e
+
+# Clean up virtual environment if it exists
+if [ -d "/usr/share/typely/.venv" ]; then
+    rm -rf /usr/share/typely/.venv
+fi
+
+exit 0
