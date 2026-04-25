@@ -61,10 +61,6 @@ class TypelyTray:
         self.listen_action.triggered.connect(self.on_toggle_listening)
         self.menu.addAction(self.listen_action)
 
-        self.open_action = QAction("Open Typely", self.menu)
-        self.open_action.triggered.connect(self.on_open_window)
-        self.menu.addAction(self.open_action)
-
         self.menu.addSeparator()
         self._build_record_mode_menu()
         self._build_hotkeys_menu()

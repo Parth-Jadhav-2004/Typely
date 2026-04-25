@@ -60,12 +60,18 @@ class UpdateChecker:
 
     def _parse_version(self, version: str) -> tuple[int, ...]:
         """Parse version string to tuple for comparison."""
-        # Remove leading 'v' if present
-        version = version.lstrip("v")
+        # Remove leading 'v' or 'V' if present
+        version = version.lstrip("vV")
+        # Remove any suffix like -beta, -alpha, etc.
+        version = version.split("-")[0]
         # Split by dots and convert to integers
         try:
-            return tuple(int(x) for x in version.split(".")[:3])
+            parts = version.split(".")
+            # Pad with zeros if needed
+            parts = parts + ["0"] * (3 - len(parts)) if len(parts) < 3 else parts[:3]
+            return tuple(int(x) for x in parts)
         except ValueError:
+            LOGGER.warning("Could not parse version: %s", version)
             return (0, 0, 0)
 
     def check_for_update(self) -> tuple[bool, str, str, str | None]:
@@ -174,9 +180,10 @@ def show_update_dialog(
     Returns:
         True if user wants to update, False otherwise
     """
-    msg = QMessageBox(parent)
+    # Use None as parent to create a standalone dialog
+    msg = QMessageBox()
     msg.setWindowTitle("Update Available")
-    msg.setText(f"A new version of Typely is available!")
+    msg.setText("A new version of Typely is available!")
     msg.setInformativeText(f"Current version: {current_version}\nLatest version: {latest_version}")
 
     if download_url:
@@ -200,31 +207,18 @@ def show_update_dialog(
     return False
 
 
-def show_update_progress_dialog(parent) -> QMessageBox:
-    """Create and return a progress dialog for updates."""
-    msg = QMessageBox(parent)
-    msg.setWindowTitle("Updating Typely")
-    msg.setText("Downloading and installing update...")
-    msg.setStandardButtons(QMessageBox.StandardButton.NoButton)
-    msg.setMinimumWidth(300)
-    return msg
-
-
 def show_update_result_dialog(parent, success: bool) -> None:
     """Show the result of the update attempt."""
+    msg = QMessageBox()
     if success:
-        msg = QMessageBox(parent)
         msg.setWindowTitle("Update Complete")
         msg.setText("Typely has been updated successfully!")
         msg.setInformativeText("The application will now restart.")
-        msg.setStandardButtons(QMessageBox.StandardButton.Ok)
-        msg.exec()
     else:
-        msg = QMessageBox(parent)
         msg.setWindowTitle("Update Failed")
         msg.setText("Failed to update Typely.")
         msg.setInformativeText(
             "Please try downloading the update manually from GitHub."
         )
-        msg.setStandardButtons(QMessageBox.StandardButton.Ok)
-        msg.exec()
+    msg.setStandardButtons(QMessageBox.StandardButton.Ok)
+    msg.exec()

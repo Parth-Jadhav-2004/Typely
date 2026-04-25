@@ -33,7 +33,6 @@ from typely.tray import TypelyTray
 from typely.updater import (
     UpdateChecker,
     show_update_dialog,
-    show_update_progress_dialog,
     show_update_result_dialog,
 )
 from typely.vad import SilenceDetector
@@ -188,11 +187,6 @@ class TypelyController(QObject):
             on_toggle=self.toggle_listening,
         )
         self.recording_capsule = RecordingCapsule()
-        self.control_window.info_label.setText(
-            "Hotkeys: Toggle "
-            f"{self.config.hotkey_toggle} | Hold {self.config.hotkey_hold}\n"
-            "Use tray menu for model/provider/microphone/output settings."
-        )
 
         self.update_checker = UpdateChecker()
         self._update_progress_dialog: QDialog | None = None
@@ -243,13 +237,8 @@ class TypelyController(QObject):
         self.hotkeys.start()
         self.refresh_audio_devices()
         if not self.tray.is_available():
-            LOGGER.warning("System tray unavailable; opening control window")
-            self.show_control_window()
-            self.control_window.set_status("Tray unavailable")
-            self.control_window.info_label.setText(
-                "System tray is unavailable in this desktop session.\n"
-                "Use this window to control Typely."
-            )
+            LOGGER.warning("System tray unavailable")
+            self.tray.notify("Typely", "System tray unavailable")
         else:
             LOGGER.info("System tray available; app running hidden")
             self.tray.notify("Typely", "Running in tray")
@@ -667,7 +656,7 @@ class TypelyController(QObject):
                 self._perform_update(download_url)
 
             show_update_dialog(
-                self.control_window,
+                None,
                 current,
                 latest,
                 download_url,
@@ -683,35 +672,64 @@ class TypelyController(QObject):
         """Download and install the update."""
         LOGGER.info("Starting update from: %s", download_url)
 
-        self._update_progress_dialog = show_update_progress_dialog(self.control_window)
-        self._update_progress_dialog.show()
+        self.tray.notify("Typely", "Downloading update...")
+        self.tray.set_status("Updating...")
+
+        # Create a simple progress callback that uses signals for thread safety
+        self._update_progress = 0
 
         def on_progress(progress: int) -> None:
-            if self._update_progress_dialog:
-                self._update_progress_dialog.setText(f"Downloading update... {progress}%")
+            self._update_progress = progress
+            LOGGER.info("Download progress: %d%%", progress)
 
         def update_worker() -> None:
-            success = self.update_checker.download_and_install(download_url, on_progress)
+            try:
+                success = self.update_checker.download_and_install(download_url, on_progress)
 
-            # Close progress dialog on main thread
-            def on_complete():
-                if self._update_progress_dialog:
-                    self._update_progress_dialog.close()
-                    self._update_progress_dialog = None
-                show_update_result_dialog(self.control_window, success)
-                if success:
-                    self.shutdown()
-                    # Restart the application
-                    import sys
-                    import subprocess
-                    subprocess.Popen([sys.executable, "-m", "typely"])
+                # Schedule completion on main thread using signal
+                def on_complete():
+                    if success:
+                        LOGGER.info("Update successful, restarting...")
+                        self.tray.notify("Typely", "Update complete! Restarting...")
+                        # Small delay to let notification show
+                        QTimer.singleShot(1000, self._restart_after_update)
+                    else:
+                        LOGGER.error("Update failed")
+                        self.tray.set_status("Idle")
+                        self.tray.notify("Typely", "Update failed. Check logs for details.")
 
-            # Use timer to run on main thread
-            QTimer.singleShot(0, on_complete)
+                QTimer.singleShot(0, on_complete)
+            except Exception as exc:
+                LOGGER.error("Update worker crashed: %s", exc, exc_info=True)
+
+                def on_error():
+                    self.tray.set_status("Idle")
+                    self.tray.notify("Typely", "Update failed due to error.")
+
+                QTimer.singleShot(0, on_error)
 
         import threading
         thread = threading.Thread(target=update_worker, daemon=True)
         thread.start()
+
+    def _restart_after_update(self) -> None:
+        """Restart the application after successful update."""
+        import sys
+        import subprocess
+        import os
+
+        LOGGER.info("Restarting Typely after update...")
+
+        # Start new process
+        subprocess.Popen(
+            [sys.executable, "-m", "typely"],
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+            start_new_session=True,
+        )
+
+        # Shutdown current instance
+        self.shutdown()
 
     def _check_updates_on_startup(self) -> None:
         """Check for updates silently on startup (no UI unless update available)."""
