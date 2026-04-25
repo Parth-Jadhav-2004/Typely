@@ -17,8 +17,8 @@ GITHUB_API_URL = "https://api.github.com/repos/{owner}/{repo}/releases/latest"
 GITHUB_RELEASE_URL = "https://github.com/{owner}/{repo}/releases/latest"
 
 # Default repository - can be configured
-DEFAULT_REPO_OWNER = "devilcoder"
-DEFAULT_REPO_NAME = "typely"
+DEFAULT_REPO_OWNER = "Parth-Jadhav-2004"
+DEFAULT_REPO_NAME = "Typely"
 
 
 class UpdateChecker:
