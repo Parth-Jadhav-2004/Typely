@@ -35,11 +35,9 @@ LOGGER = logging.getLogger(__name__)
 
 
 class TypelyControlWindow(QWidget):
-    def __init__(self, on_toggle: Callable[[], None], on_hide: Callable[[], None], on_quit: Callable[[], None]) -> None:
+    def __init__(self, on_toggle: Callable[[], None]) -> None:
         super().__init__()
         self._on_toggle = on_toggle
-        self._on_hide = on_hide
-        self._on_quit = on_quit
 
         self.setWindowTitle("Typely")
         self.resize(460, 220)
@@ -56,14 +54,8 @@ class TypelyControlWindow(QWidget):
         buttons = QHBoxLayout()
         self.toggle_button = QPushButton("Start Listening", self)
         self.toggle_button.clicked.connect(self._on_toggle)
-        hide_button = QPushButton("Hide", self)
-        hide_button.clicked.connect(self._on_hide)
-        quit_button = QPushButton("Quit", self)
-        quit_button.clicked.connect(self._on_quit)
 
         buttons.addWidget(self.toggle_button)
-        buttons.addWidget(hide_button)
-        buttons.addWidget(quit_button)
 
         layout.addWidget(self.status_label)
         layout.addWidget(self.info_label)
@@ -187,8 +179,6 @@ class TypelyController(QObject):
         self._download_dialog: QDialog | None = None
         self.control_window = TypelyControlWindow(
             on_toggle=self.toggle_listening,
-            on_hide=lambda: self.control_window.hide(),
-            on_quit=self.shutdown,
         )
         self.recording_capsule = RecordingCapsule()
         self.control_window.info_label.setText(
