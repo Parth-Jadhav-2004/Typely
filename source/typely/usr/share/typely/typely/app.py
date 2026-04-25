@@ -16,6 +16,7 @@ from PySide6.QtWidgets import (
     QDialog,
     QHBoxLayout,
     QLabel,
+    QMessageBox,
     QPushButton,
     QWidget,
     QVBoxLayout,
@@ -29,6 +30,12 @@ from typely.models import MODEL_REGISTRY, ModelManager
 from typely.output import OutputSink
 from typely.transcribe import Transcriber
 from typely.tray import TypelyTray
+from typely.updater import (
+    UpdateChecker,
+    show_update_dialog,
+    show_update_progress_dialog,
+    show_update_result_dialog,
+)
 from typely.vad import SilenceDetector
 
 LOGGER = logging.getLogger(__name__)
@@ -187,6 +194,9 @@ class TypelyController(QObject):
             "Use tray menu for model/provider/microphone/output settings."
         )
 
+        self.update_checker = UpdateChecker()
+        self._update_progress_dialog: QDialog | None = None
+
         self.tray = TypelyTray(
             app=app,
             config=self.config,
@@ -205,6 +215,7 @@ class TypelyController(QObject):
             on_silence_timeout_change=self.set_silence_timeout,
             autostart_enabled=is_autostart_enabled(),
             on_autostart_change=self.set_autostart_enabled,
+            on_check_updates=self.check_for_updates,
             on_quit=self.shutdown,
         )
 
@@ -242,6 +253,9 @@ class TypelyController(QObject):
         else:
             LOGGER.info("System tray available; app running hidden")
             self.tray.notify("Typely", "Running in tray")
+
+        # Check for updates silently on startup
+        QTimer.singleShot(5000, self._check_updates_on_startup)
 
     def show_control_window(self) -> None:
         self.control_window.show()
@@ -636,6 +650,76 @@ class TypelyController(QObject):
         if message_override:
             return f"{model_name}: {status} ({message_override})"
         return f"{model_name}: {status}"
+
+    def check_for_updates(self) -> None:
+        """Check for updates and show dialog if available."""
+        LOGGER.info("Checking for updates...")
+        self.tray.set_status("Checking updates...")
+
+        has_update, current, latest, download_url = self.update_checker.check_for_update()
+
+        if has_update:
+            LOGGER.info("Update available: %s -> %s", current, latest)
+            self.tray.set_update_available(True)
+            self.tray.notify("Update Available", f"New version {latest} is available!")
+
+            def do_update():
+                self._perform_update(download_url)
+
+            show_update_dialog(
+                self.control_window,
+                current,
+                latest,
+                download_url,
+                do_update,
+            )
+        else:
+            LOGGER.info("No updates available (current: %s)", current)
+            self.tray.set_update_available(False)
+            self.tray.notify("Typely", "You are running the latest version!")
+            self.tray.set_status("Idle")
+
+    def _perform_update(self, download_url: str) -> None:
+        """Download and install the update."""
+        LOGGER.info("Starting update from: %s", download_url)
+
+        self._update_progress_dialog = show_update_progress_dialog(self.control_window)
+        self._update_progress_dialog.show()
+
+        def on_progress(progress: int) -> None:
+            if self._update_progress_dialog:
+                self._update_progress_dialog.setText(f"Downloading update... {progress}%")
+
+        def update_worker() -> None:
+            success = self.update_checker.download_and_install(download_url, on_progress)
+
+            # Close progress dialog on main thread
+            def on_complete():
+                if self._update_progress_dialog:
+                    self._update_progress_dialog.close()
+                    self._update_progress_dialog = None
+                show_update_result_dialog(self.control_window, success)
+                if success:
+                    self.shutdown()
+                    # Restart the application
+                    import sys
+                    import subprocess
+                    subprocess.Popen([sys.executable, "-m", "typely"])
+
+            # Use timer to run on main thread
+            QTimer.singleShot(0, on_complete)
+
+        import threading
+        thread = threading.Thread(target=update_worker, daemon=True)
+        thread.start()
+
+    def _check_updates_on_startup(self) -> None:
+        """Check for updates silently on startup (no UI unless update available)."""
+        has_update, current, latest, download_url = self.update_checker.check_for_update()
+        if has_update:
+            LOGGER.info("Update available on startup: %s -> %s", current, latest)
+            self.tray.set_update_available(True)
+            self.tray.notify("Update Available", f"New version {latest} is available! Click 'Check for Updates' in the tray menu.")
 
 
 def run_app(show_window: bool = False) -> None:

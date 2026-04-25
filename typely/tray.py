@@ -3,7 +3,7 @@ from __future__ import annotations
 from collections.abc import Callable
 
 from PySide6.QtGui import QAction, QActionGroup, QIcon
-from PySide6.QtWidgets import QApplication, QInputDialog, QLineEdit, QMenu, QStyle, QSystemTrayIcon
+from PySide6.QtWidgets import QApplication, QDialog, QInputDialog, QLineEdit, QMenu, QStyle, QSystemTrayIcon
 
 from typely.config import AppConfig
 
@@ -28,6 +28,7 @@ class TypelyTray:
         on_silence_timeout_change: Callable[[int], None],
         autostart_enabled: bool,
         on_autostart_change: Callable[[bool], None],
+        on_check_updates: Callable[[], None],
         on_quit: Callable[[], None],
     ) -> None:
         self.app = app
@@ -46,6 +47,7 @@ class TypelyTray:
         self.on_silence_enabled_change = on_silence_enabled_change
         self.on_silence_timeout_change = on_silence_timeout_change
         self.on_autostart_change = on_autostart_change
+        self.on_check_updates = on_check_updates
         self.on_quit = on_quit
 
         self.tray = QSystemTrayIcon(self._build_icon(), app)
@@ -94,6 +96,11 @@ class TypelyTray:
         self.autostart_action.setChecked(autostart_enabled)
         self.autostart_action.toggled.connect(self.on_autostart_change)
         self.menu.addAction(self.autostart_action)
+
+        self.menu.addSeparator()
+        self.update_action = QAction("Check for Updates", self.menu)
+        self.update_action.triggered.connect(self.on_check_updates)
+        self.menu.addAction(self.update_action)
 
         self.menu.addSeparator()
         quit_action = QAction("Quit", self.menu)
@@ -257,6 +264,12 @@ class TypelyTray:
 
     def notify(self, title: str, message: str) -> None:
         self.tray.showMessage(title, message, QSystemTrayIcon.Information, 2500)
+
+    def set_update_available(self, available: bool) -> None:
+        if available:
+            self.update_action.setText("Update Available! - Click to Update")
+        else:
+            self.update_action.setText("Check for Updates")
 
     def close(self) -> None:
         self.tray.hide()
