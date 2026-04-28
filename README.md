@@ -2,6 +2,14 @@
 
 Typely is an Ubuntu Linux tray application for speech-to-text transcription.
 
+## About Typely
+
+Typely is designed for people who want fast voice typing on Linux without leaving their current workflow. It runs quietly in the system tray, listens when you trigger it with a global hotkey, transcribes your speech locally using Whisper models, and then inserts the text directly where your cursor is focused (or copies it to the clipboard if you prefer).
+
+Unlike browser-based dictation tools, Typely is built for desktop productivity and privacy-first usage. Transcription is performed locally on your machine through `faster-whisper`, so your recordings are not sent to a cloud API. This makes it useful for writing emails, coding comments, notes, documentation, and chat messages while keeping control of your data.
+
+The app is intentionally lightweight and practical: quick start/stop controls from the tray, hold-to-talk or toggle recording modes, configurable silence auto-stop, easy microphone switching, and downloadable model choices (`small` and `medium`) depending on your speed vs accuracy preference.
+
 ## Features
 
 - Tray-first workflow (starts hidden in system tray)
